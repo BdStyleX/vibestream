@@ -1,0 +1,49 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function within1(a, b) { return a - b >= -1 && a - b <= 1; }
+
+    match /users/{uid} {
+      allow read: if signedIn();
+      allow write: if signedIn() && request.auth.uid == uid;
+      match /blocked/{other} {
+        allow read, write: if signedIn() && request.auth.uid == uid;
+      }
+    }
+
+    match /posts/{postId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.caption is string
+        && request.resource.data.caption.size() <= 2000
+        && request.resource.data.likeCount == 0
+        && request.resource.data.votesA == 0
+        && request.resource.data.votesB == 0;
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+      // Only the counters may change, and only by 1 at a time.
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['likeCount', 'votesA', 'votesB'])
+        && within1(request.resource.data.likeCount, resource.data.likeCount)
+        && within1(request.resource.data.votesA, resource.data.votesA)
+        && within1(request.resource.data.votesB, resource.data.votesB);
+
+      match /likes/{uid} {
+        allow read: if signedIn();
+        allow create, delete: if signedIn() && request.auth.uid == uid;
+      }
+      match /votes/{uid} {
+        allow read: if signedIn();
+        allow create: if signedIn() && request.auth.uid == uid;
+      }
+    }
+
+    // Reports can only be written; you read them in the Firebase console.
+    match /reports/{id} {
+      allow create: if signedIn() && request.resource.data.reporterUid == request.auth.uid;
+    }
+  }
+}
