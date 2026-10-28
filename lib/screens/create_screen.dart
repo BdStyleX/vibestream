@@ -3,6 +3,9 @@ import 'package:image_picker/image_picker.dart';
 import '../services/post_service.dart';
 import '../theme.dart';
 
+/// Photo/video upload needs Firebase Storage (paid Blaze plan). Set to true once enabled.
+const kMediaUploads = false;
+
 class CreateScreen extends StatefulWidget {
   final VoidCallback onPosted;
   const CreateScreen({super.key, required this.onPosted});
@@ -85,6 +88,7 @@ class _CreateScreenState extends State<CreateScreen> {
       const SizedBox(height: 14),
       TextField(controller: caption, maxLines: 4, maxLength: 2000, decoration: _dec('What is your vibe?')),
       const SizedBox(height: 8),
+      if (kMediaUploads)
       Row(children: [
         OutlinedButton.icon(onPressed: busy ? null : () => _pick(false), icon: const Icon(Icons.image_outlined), label: const Text('Photo')),
         const SizedBox(width: 8),
